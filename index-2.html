@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Under the Lens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --paper: #f4f0e8;
+    --accent-r: #e8341c;
+    --accent-b: #1c4de8;
+    --accent-g: #1cb87e;
+    --accent-y: #f5c518;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --serif: 'Instrument Serif', serif;
+    --gutter: clamp(1.5rem, 5vw, 4rem);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CUSTOM CURSOR */
+  #cursor {
+    width: 12px; height: 12px;
+    background: var(--accent-r);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.08s, background 0.2s, width 0.15s, height 0.15s;
+    mix-blend-mode: multiply;
+  }
+  #cursor.big { width: 36px; height: 36px; background: var(--accent-b); }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.2rem var(--gutter);
+    z-index: 500;
+    background: rgba(244,240,232,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1.5px solid var(--ink);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    text-decoration: none;
+    color: var(--ink);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    position: relative;
+    transition: opacity 0.2s;
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute; bottom: -2px; left: 0;
+    width: 0; height: 1.5px;
+    background: var(--accent-r);
+    transition: width 0.25s;
+  }
+  .nav-links a:hover::after { width: 100%; }
+
+  /* HERO */
+  #hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 2px solid var(--ink);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-left {
+    padding: calc(var(--gutter) * 2) var(--gutter);
+    padding-top: 10rem;
+    display: flex; flex-direction: column; justify-content: center;
+    border-right: 2px solid var(--ink);
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-r);
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.3s forwards;
+  }
+
+  .hero-title {
+    font-family: var(--serif);
+    font-size: clamp(3.5rem, 7vw, 7rem);
+    line-height: 0.96;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.5s forwards;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent-b);
+  }
+
+  .hero-desc {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    max-width: 42ch;
+    opacity: 0.65;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.7s forwards;
+  }
+
+  .hero-right {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .hero-stat {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 3rem;
+    border-bottom: 2px solid var(--ink);
+    opacity: 0;
+    animation: fadeIn 0.6s 1s forwards;
+  }
+  .hero-stat:last-child { border-bottom: none; }
+
+  .stat-num {
+    font-family: var(--serif);
+    font-size: clamp(3rem, 6vw, 5.5rem);
+    line-height: 1;
+    font-style: italic;
+  }
+  .hero-stat:nth-child(1) .stat-num { color: var(--accent-r); }
+  .hero-stat:nth-child(2) .stat-num { color: var(--accent-b); }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    margin-top: 0.5rem;
+    max-width: 28ch;
+    line-height: 1.6;
+  }
+
+  /* SCROLL INDICATOR */
+  .scroll-hint {
+    position: absolute; bottom: 2rem; left: var(--gutter);
+    display: flex; align-items: center; gap: 0.8rem;
+    font-family: var(--mono); font-size: 0.65rem;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    opacity: 0.4;
+    animation: fadeIn 1s 1.5s forwards; opacity: 0;
+  }
+  .scroll-line {
+    width: 40px; height: 1px;
+    background: var(--ink);
+    animation: lineGrow 1.5s 2s forwards;
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+
+  /* SECTION SHARED */
+  section { position: relative; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    display: flex; align-items: center; gap: 1rem;
+    margin-bottom: 3rem;
+  }
+  .section-label::before {
+    content: '';
+    width: 30px; height: 1px;
+    background: currentColor;
+  }
+
+  /* BIAS SECTION */
+  #bias {
+    padding: clamp(4rem, 8vw, 8rem) var(--gutter);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .bias-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    margin-bottom: 5rem;
+    align-items: end;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 400;
+    line-height: 1.05;
+  }
+
+  .bias-intro {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.9;
+    opacity: 0.65;
+    align-self: end;
+  }
+
+  /* BIAS SIMULATOR */
+  .bias-simulator {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 2px;
+    padding: 3rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bias-simulator::before {
+    content: 'LIVE DEMO';
+    position: absolute; top: 1.5rem; right: 1.5rem;
+    font-family: var(--mono); font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--accent-g);
+    border: 1px solid var(--accent-g);
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+  }
+
+  .sim-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-y);
+    margin-bottom: 1.5rem;
+  }
+
+  .sim-desc {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.7;
+    opacity: 0.6;
+    margin-bottom: 2rem;
+    max-width: 60ch;
+  }
+
+  .sim-controls {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+
+  .sim-btn {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.6rem 1.2rem;
+    border: 1.5px solid rgba(244,240,232,0.3);
+    background: transparent;
+    color: var(--paper);
+    cursor: none;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .sim-btn:hover, .sim-btn.active {
+    border-color: var(--accent-y);
+    color: var(--accent-y);
+    background: rgba(245,197,24,0.08);
+  }
+
+  .bar-chart {
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+
+  .bar-row {
+    display: flex; align-items: center; gap: 1rem;
+  }
+
+  .bar-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    width: 160px;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .bar-track {
+    flex: 1; height: 28px;
+    background: rgba(244,240,232,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    display: flex; align-items: center; padding-left: 0.8rem;
+    font-family: var(--mono); font-size: 0.65rem; font-weight: 400;
+    color: var(--ink);
+    min-width: 2.5rem;
+  }
+
+  .bar-note {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    opacity: 0.4;
+    margin-top: 1.5rem;
+    line-height: 1.6;
+    border-top: 1px solid rgba(244,240,232,0.1);
+    padding-top: 1.2rem;
+  }
+
+  /* ETHICS SECTION */
+  #ethics {
+    padding: clamp(4rem, 8vw, 8rem) var(--gutter);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .ethics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--ink);
+    border: 2px solid var(--ink);
+    margin-top: 4rem;
+  }
+
+  .ethics-card {
+    background: var(--paper);
+    padding: 2.5rem 2rem;
+    transition: background 0.25s;
+    cursor: none;
+  }
+  .ethics-card:hover { background: #edeae0; }
+
+  .card-num {
+    font-family: var(--serif);
+    font-size: 3.5rem;
+    font-style: italic;
+    line-height: 1;
+    margin-bottom: 1.2rem;
+    opacity: 0.15;
+  }
+
+  .card-title {
+    font-family: var(--sans);
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    letter-spacing: -0.01em;
+  }
+
+  .card-body {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1.8;
+    opacity: 0.65;
+  }
+
+  .card-tag {
+    display: inline-block;
+    margin-top: 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+  }
+
+  /* POLICY SECTION */
+  #policy {
+    padding: clamp(4rem, 8vw, 8rem) var(--gutter);
+    border-bottom: 2px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  #policy .section-label { color: var(--paper); }
+  #policy .section-title { color: var(--paper); }
+
+  .timeline {
+    margin-top: 4rem;
+    position: relative;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 1px;
+    background: rgba(244,240,232,0.15);
+  }
+
+  .timeline-item {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 3rem;
+    padding: 2.5rem 0;
+    border-bottom: 1px solid rgba(244,240,232,0.08);
+    position: relative;
+    cursor: none;
+    transition: all 0.25s;
+  }
+  .timeline-item:hover { padding-left: 1rem; }
+  .timeline-item::before {
+    content: '';
+    position: absolute; left: -4px; top: 50%;
+    transform: translateY(-50%);
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--paper);
+    opacity: 0.2;
+    transition: opacity 0.2s, background 0.2s;
+  }
+  .timeline-item:hover::before { opacity: 1; background: var(--accent-y); }
+
+  .timeline-year {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 2.5rem;
+    opacity: 0.25;
+    line-height: 1;
+    align-self: start;
+    padding-top: 0.2rem;
+  }
+
+  .timeline-content { }
+
+  .timeline-region {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-y);
+    margin-bottom: 0.6rem;
+  }
+
+  .timeline-title {
+    font-family: var(--sans);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .timeline-body {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1.8;
+    opacity: 0.55;
+    max-width: 60ch;
+  }
+
+  /* HEALTHCARE SECTION */
+  #healthcare {
+    padding: clamp(4rem, 8vw, 8rem) var(--gutter);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .health-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 5rem;
+    margin-top: 4rem;
+    align-items: start;
+  }
+
+  .health-intro {
+    position: sticky;
+    top: 6rem;
+  }
+
+  .health-intro p {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.9;
+    opacity: 0.65;
+    margin-top: 1.5rem;
+  }
+
+  .health-quote {
+    margin-top: 2.5rem;
+    padding: 1.5rem;
+    border-left: 3px solid var(--accent-g);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    opacity: 0.8;
+  }
+
+  .case-cards { display: flex; flex-direction: column; gap: 2px; }
+
+  .case-card {
+    border: 2px solid var(--ink);
+    padding: 2rem;
+    cursor: none;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .case-card:hover { transform: translateX(6px); }
+
+  .case-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 4px; height: 100%;
+  }
+  .case-card.red::before { background: var(--accent-r); }
+  .case-card.blue::before { background: var(--accent-b); }
+  .case-card.green::before { background: var(--accent-g); }
+  .case-card.yellow::before { background: var(--accent-y); }
+
+  .case-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 0.8rem;
+  }
+  .case-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+  }
+  .case-badge {
+    font-family: var(--mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    border: 1px solid;
+    flex-shrink: 0;
+    margin-left: 1rem;
+  }
+  .case-card.red .case-badge { color: var(--accent-r); border-color: var(--accent-r); }
+  .case-card.blue .case-badge { color: var(--accent-b); border-color: var(--accent-b); }
+  .case-card.green .case-badge { color: var(--accent-g); border-color: var(--accent-g); }
+  .case-card.yellow .case-badge { color: var(--accent-y); border-color: var(--accent-y); }
+
+  .case-body {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1.8;
+    opacity: 0.65;
+    padding-left: 0.8rem;
+  }
+
+  /* QUIZ SECTION */
+  #quiz {
+    padding: clamp(4rem, 8vw, 8rem) var(--gutter);
+    border-bottom: 2px solid var(--ink);
+    background: #0f0f18;
+    color: var(--paper);
+  }
+  #quiz .section-label { color: rgba(244,240,232,0.4); }
+
+  .quiz-header {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: end;
+    margin-bottom: 4rem;
+  }
+
+  .quiz-subtitle {
+    font-family: var(--mono); font-size: 0.82rem;
+    line-height: 1.8; opacity: 0.5;
+  }
+
+  .quiz-box {
+    background: rgba(244,240,232,0.04);
+    border: 1.5px solid rgba(244,240,232,0.12);
+    border-radius: 4px;
+    padding: 3rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .quiz-progress {
+    display: flex; gap: 6px; margin-bottom: 2.5rem;
+  }
+
+  .progress-pip {
+    flex: 1; height: 3px;
+    background: rgba(244,240,232,0.15);
+    border-radius: 3px;
+    transition: background 0.3s;
+  }
+  .progress-pip.done { background: var(--accent-g); }
+  .progress-pip.active { background: var(--accent-y); }
+
+  .quiz-q-num {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-y);
+    margin-bottom: 1rem;
+  }
+
+  .quiz-question {
+    font-family: var(--serif);
+    font-size: clamp(1.2rem, 2.5vw, 1.7rem);
+    font-style: italic;
+    line-height: 1.4;
+    margin-bottom: 2.5rem;
+    color: var(--paper);
+  }
+
+  .quiz-options {
+    display: flex; flex-direction: column; gap: 0.8rem;
+  }
+
+  .quiz-opt {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 1rem 1.2rem;
+    border: 1.5px solid rgba(244,240,232,0.2);
+    background: transparent;
+    color: var(--paper);
+    text-align: left;
+    cursor: none;
+    border-radius: 3px;
+    transition: all 0.2s;
+    line-height: 1.5;
+  }
+  .quiz-opt:hover:not(:disabled) {
+    border-color: var(--accent-y);
+    background: rgba(245,197,24,0.06);
+    color: var(--accent-y);
+  }
+  .quiz-opt.correct { border-color: var(--accent-g) !important; background: rgba(28,184,126,0.12) !important; color: var(--accent-g) !important; }
+  .quiz-opt.wrong { border-color: var(--accent-r) !important; background: rgba(232,52,28,0.1) !important; color: var(--accent-r) !important; }
+
+  .quiz-feedback {
+    margin-top: 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.7;
+    padding: 1rem 1.2rem;
+    border-radius: 3px;
+    display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.correct { background: rgba(28,184,126,0.1); color: var(--accent-g); border: 1px solid rgba(28,184,126,0.3); }
+  .quiz-feedback.wrong { background: rgba(232,52,28,0.1); color: #ff7b67; border: 1px solid rgba(232,52,28,0.3); }
+
+  .quiz-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 2rem;
+  }
+
+  .quiz-score-display {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    opacity: 0.5;
+    letter-spacing: 0.08em;
+  }
+
+  .quiz-next-btn {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.7rem 1.6rem;
+    background: var(--accent-y);
+    color: var(--ink);
+    border: none;
+    cursor: none;
+    border-radius: 2px;
+    font-weight: 600;
+    transition: opacity 0.2s, transform 0.15s;
+    display: none;
+  }
+  .quiz-next-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .quiz-next-btn.show { display: inline-block; }
+
+  .quiz-result {
+    text-align: center;
+    display: none;
+    padding: 2rem;
+  }
+  .quiz-result.show { display: block; }
+  .result-score {
+    font-family: var(--serif);
+    font-size: 5rem;
+    font-style: italic;
+    color: var(--accent-y);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .result-label {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 1.5rem;
+  }
+  .result-msg {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    opacity: 0.7;
+    margin-bottom: 2rem;
+  }
+  .quiz-restart {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.8rem 2rem;
+    background: transparent;
+    border: 1.5px solid var(--paper);
+    color: var(--paper);
+    cursor: none;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .quiz-restart:hover { background: var(--paper); color: var(--ink); }
+
+  /* FOOTER */
+  footer {
+    padding: 3rem var(--gutter);
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .footer-left {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-style: italic;
+    opacity: 0.35;
+  }
+  .footer-right {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.3;
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes lineGrow {
+    to { transform: scaleX(1); }
+  }
+
+  /* SCROLL REVEAL */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    #hero { grid-template-columns: 1fr; }
+    .hero-right { display: none; }
+    .hero-left { border-right: none; }
+    .bias-header { grid-template-columns: 1fr; gap: 2rem; }
+    .ethics-grid { grid-template-columns: 1fr; }
+    .health-layout { grid-template-columns: 1fr; }
+    .health-intro { position: static; }
+    .quiz-header { grid-template-columns: 1fr; }
+    .timeline-item { grid-template-columns: 80px 1fr; gap: 1.5rem; }
+    footer { flex-direction: column; gap: 1.5rem; text-align: center; }
+    .footer-right { text-align: center; }
+    nav ul { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">AI Under the Lens</div>
+  <ul class="nav-links">
+    <li><a href="#bias">Bias</a></li>
+    <li><a href="#ethics">Ethics</a></li>
+    <li><a href="#policy">Policy</a></li>
+    <li><a href="#healthcare">Healthcare</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">A Critical Exploration</div>
+    <h1 class="hero-title">
+      AI<br>
+      Under<br>
+      the <em>Lens</em>
+    </h1>
+    <p class="hero-desc">
+      Artificial intelligence is reshaping society at every level —
+      but who watches the systems doing the watching?
+      Explore the intersections of bias, ethics, regulation, and health.
+    </p>
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      Scroll to explore
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-stat">
+      <div class="stat-num">77%</div>
+      <div class="stat-label">of AI ethics guidelines lack any enforcement mechanism, per a 2023 UNESCO review</div>
+    </div>
+    <div class="hero-stat">
+      <div class="stat-num">34×</div>
+      <div class="stat-label">higher false-positive rate for facial recognition on darker-skinned women vs. lighter-skinned men (MIT Media Lab)</div>
+    </div>
+  </div>
+</section>
+
+<!-- BIAS -->
+<section id="bias">
+  <div class="bias-header reveal">
+    <div>
+      <div class="section-label">01 — Algorithmic Bias</div>
+      <h2 class="section-title">When data inherits<br>history's prejudice</h2>
+    </div>
+    <p class="bias-intro">
+      AI systems learn from human-generated data — and human data is laden with centuries
+      of structural inequality. From hiring algorithms to criminal sentencing tools,
+      bias compounds at scale in ways that are often invisible until examined closely.
+    </p>
+  </div>
+
+  <div class="bias-simulator reveal">
+    <div class="sim-title">Bias Amplification Simulator</div>
+    <p class="sim-desc">
+      Select a domain to see how documented AI systems have shown disparate outcomes
+      across demographic groups. These figures are drawn from published audits.
+    </p>
+    <div class="sim-controls">
+      <button class="sim-btn active" onclick="showBias('hiring')">Hiring Tools</button>
+      <button class="sim-btn" onclick="showBias('face')">Facial Recognition</button>
+      <button class="sim-btn" onclick="showBias('lending')">Credit Lending</button>
+      <button class="sim-btn" onclick="showBias('medical')">Medical Risk</button>
+    </div>
+    <div class="bar-chart" id="biasChart"></div>
+    <div class="bar-note" id="biasNote"></div>
+  </div>
+</section>
+
+<!-- ETHICS -->
+<section id="ethics">
+  <div class="reveal">
+    <div class="section-label">02 — Ethical Frameworks</div>
+    <h2 class="section-title">The principles<br>AI must uphold</h2>
+  </div>
+
+  <div class="ethics-grid">
+    <div class="ethics-card reveal">
+      <div class="card-num">01</div>
+      <div class="card-title">Transparency & Explainability</div>
+      <p class="card-body">
+        Users have a right to understand how automated decisions are made.
+        Black-box models — especially in high-stakes settings like credit, healthcare,
+        and criminal justice — undermine informed consent and accountability.
+      </p>
+      <span class="card-tag" style="background:#e8341c20;color:var(--accent-r)">Governance</span>
+    </div>
+    <div class="ethics-card reveal">
+      <div class="card-num">02</div>
+      <div class="card-title">Fairness & Non-Discrimination</div>
+      <p class="card-body">
+        AI should not produce or reinforce discrimination based on race, gender, age,
+        disability, or other protected characteristics. Fairness is not one metric —
+        it is a constellation of competing definitions that require deliberate trade-offs.
+      </p>
+      <span class="card-tag" style="background:#1c4de820;color:var(--accent-b)">Social Justice</span>
+    </div>
+    <div class="ethics-card reveal">
+      <div class="card-num">03</div>
+      <div class="card-title">Privacy & Data Sovereignty</div>
+      <p class="card-body">
+        Training on personal data without meaningful consent creates extractive relationships
+        between platforms and individuals. Privacy-preserving techniques like federated
+        learning and differential privacy offer partial but imperfect remedies.
+      </p>
+      <span class="card-tag" style="background:#1cb87e20;color:var(--accent-g)">Rights</span>
+    </div>
+    <div class="ethics-card reveal">
+      <div class="card-num">04</div>
+      <div class="card-title">Human Oversight & Control</div>
+      <p class="card-body">
+        As AI capabilities expand, meaningful human oversight becomes both more important
+        and more difficult to ensure. HITL (Human-in-the-Loop) design is often nominal —
+        rubber-stamping automation rather than genuine review.
+      </p>
+      <span class="card-tag" style="background:#f5c51820;color:var(--accent-y)">Safety</span>
+    </div>
+    <div class="ethics-card reveal">
+      <div class="card-num">05</div>
+      <div class="card-title">Accountability & Redress</div>
+      <p class="card-body">
+        When AI causes harm, who is responsible? Diffuse accountability across
+        developers, deployers, and regulators creates gaps where no one is
+        answerable. Meaningful redress mechanisms are essential.
+      </p>
+      <span class="card-tag" style="background:#e8341c20;color:var(--accent-r)">Governance</span>
+    </div>
+    <div class="ethics-card reveal">
+      <div class="card-num">06</div>
+      <div class="card-title">Environmental Impact</div>
+      <p class="card-body">
+        Training large models consumes enormous energy. GPT-3 training emitted roughly
+        the CO₂ of five trans-American flights. As models scale, the environmental cost
+        of AI is an underexamined ethical dimension.
+      </p>
+      <span class="card-tag" style="background:#1cb87e20;color:var(--accent-g)">Sustainability</span>
+    </div>
+  </div>
+</section>
+
+<!-- POLICY -->
+<section id="policy">
+  <div class="reveal">
+    <div class="section-label">03 — Regulation & Policy</div>
+    <h2 class="section-title" style="max-width:14ch">The global race to govern AI</h2>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-item reveal">
+      <div class="timeline-year">2016</div>
+      <div class="timeline-content">
+        <div class="timeline-region">United States</div>
+        <div class="timeline-title">NIST AI Risk Management Framework</div>
+        <p class="timeline-body">The National Institute of Standards and Technology released foundational guidelines for AI risk, establishing vocabulary and voluntary practices for trustworthy AI system design — setting a precedent for risk-based thinking.</p>
+      </div>
+    </div>
+    <div class="timeline-item reveal">
+      <div class="timeline-year">2019</div>
+      <div class="timeline-content">
+        <div class="timeline-region">OECD / G20</div>
+        <div class="timeline-title">OECD AI Principles Adopted</div>
+        <p class="timeline-body">42 countries endorsed five principles for trustworthy AI: inclusive growth, human-centred values, transparency, robustness, and accountability. The first intergovernmental standard on AI — soft law, but widely influential.</p>
+      </div>
+    </div>
+    <div class="timeline-item reveal">
+      <div class="timeline-year">2021</div>
+      <div class="timeline-content">
+        <div class="timeline-region">European Union</div>
+        <div class="timeline-title">EU AI Act Proposal</div>
+        <p class="timeline-body">The European Commission proposed a risk-tiered regulatory framework: prohibited uses (social scoring, real-time biometric surveillance), high-risk systems requiring conformity assessment, and lighter-touch rules for general-purpose AI.</p>
+      </div>
+    </div>
+    <div class="timeline-item reveal">
+      <div class="timeline-year">2023</div>
+      <div class="timeline-content">
+        <div class="timeline-region">United States</div>
+        <div class="timeline-title">Executive Order on AI Safety</div>
+        <p class="timeline-body">Biden's EO required safety evaluations before releasing powerful AI models, mandated watermarking of AI-generated content, and directed federal agencies to develop AI governance plans — the most comprehensive U.S. federal AI action to date.</p>
+      </div>
+    </div>
+    <div class="timeline-item reveal">
+      <div class="timeline-year">2024</div>
+      <div class="timeline-content">
+        <div class="timeline-region">European Union</div>
+        <div class="timeline-title">EU AI Act Enacted</div>
+        <p class="timeline-body">The world's first comprehensive AI law passed into force, with phased implementation through 2027. It bans certain uses, imposes strict requirements on high-risk systems, and requires GPAI model transparency — setting a global benchmark.</p>
+      </div>
+    </div>
+    <div class="timeline-item reveal">
+      <div class="timeline-year">2025</div>
+      <div class="timeline-content">
+        <div class="timeline-region">Global</div>
+        <div class="timeline-title">Fragmented Regulatory Landscape</div>
+        <p class="timeline-body">China enacted sector-specific AI rules. The UK pursued a principles-based approach. G7 nations signed the Hiroshima Code of Conduct for AI developers. Regulatory divergence between jurisdictions remains a central challenge for global AI governance.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HEALTHCARE -->
+<section id="healthcare">
+  <div class="health-layout">
+    <div class="health-intro reveal">
+      <div class="section-label">04 — AI in Healthcare</div>
+      <h2 class="section-title">Healing —<br>or widening<br>the gap?</h2>
+      <p>
+        AI holds remarkable promise in medicine: earlier cancer detection,
+        drug discovery acceleration, and reduced diagnostic error. But it also risks
+        encoding healthcare inequality at scale, replacing the art of medicine
+        with opaque algorithmic recommendations.
+      </p>
+      <blockquote class="health-quote">
+        "Medicine is a social science, and politics is nothing else but medicine on a large scale."
+        <br><br>— Rudolf Virchow, 1848
+      </blockquote>
+    </div>
+    <div class="case-cards">
+      <div class="case-card red reveal">
+        <div class="case-header">
+          <div class="case-title">Dermatology AI & Skin Tone Bias</div>
+          <span class="case-badge">Risk</span>
+        </div>
+        <p class="case-body">
+          The majority of skin disease datasets are over 80% lighter skin tones.
+          AI dermatology tools trained on these datasets show significantly lower
+          diagnostic accuracy for darker skin — widening disparities in
+          melanoma detection for populations already underserved by dermatology.
+        </p>
+      </div>
+      <div class="case-card blue reveal">
+        <div class="case-header">
+          <div class="case-title">Sepsis Prediction & Algorithmic Opacity</div>
+          <span class="case-badge">Alert</span>
+        </div>
+        <p class="case-body">
+          Several hospitals deployed proprietary sepsis prediction algorithms that
+          flagged patients for early intervention. Independent audits of one
+          widely-used system (Epic Sepsis Model) found it missed two-thirds of
+          sepsis cases — yet clinicians trusted model outputs over their own judgment.
+        </p>
+      </div>
+      <div class="case-card green reveal">
+        <div class="case-header">
+          <div class="case-title">AlphaFold & Drug Discovery</div>
+          <span class="case-badge">Breakthrough</span>
+        </div>
+        <p class="case-body">
+          DeepMind's AlphaFold predicted the structure of virtually every known
+          protein — 200 million structures — in months, a task that would have taken
+          billions of research-years by hand. It has accelerated drug development
+          for malaria, antibiotic resistance, and rare diseases.
+        </p>
+      </div>
+      <div class="case-card yellow reveal">
+        <div class="case-header">
+          <div class="case-title">Optum's Race-Biased Risk Score</div>
+          <span class="case-badge">Documented</span>
+        </div>
+        <p class="case-body">
+          A widely used commercial algorithm for identifying high-risk patients
+          used healthcare cost as a proxy for health need — but Black patients
+          with equal levels of illness generated lower costs due to unequal
+          healthcare access, causing systematic under-referral to care management.
+        </p>
+      </div>
+      <div class="case-card blue reveal">
+        <div class="case-header">
+          <div class="case-title">AI-Assisted Radiology</div>
+          <span class="case-badge">Promise</span>
+        </div>
+        <p class="case-body">
+          FDA-cleared AI tools for chest X-ray and mammography triage have shown
+          sensitivity comparable to radiologists, enabling earlier detection and
+          reducing reading backlogs — particularly valuable in low-resource settings
+          without specialist access.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="quiz-header reveal">
+    <div>
+      <div class="section-label">05 — Test Your Knowledge</div>
+      <h2 class="section-title" style="color:var(--paper)">What do<br>you know<br>about AI?</h2>
+    </div>
+    <p class="quiz-subtitle">
+      Six questions spanning bias, ethics, policy, and healthcare.
+      These aren't easy — they're designed to challenge assumptions
+      and surface the nuance behind each topic.
+    </p>
+  </div>
+
+  <div class="quiz-box">
+    <div id="quizMain">
+      <div class="quiz-progress" id="quizProgress"></div>
+      <div class="quiz-q-num" id="quizQNum"></div>
+      <div class="quiz-question" id="quizQuestion"></div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+      <div class="quiz-nav">
+        <div class="quiz-score-display" id="quizScoreDisplay">Score: 0 / 0</div>
+        <button class="quiz-next-btn" id="quizNextBtn" onclick="nextQuestion()">Next →</button>
+      </div>
+    </div>
+    <div class="quiz-result" id="quizResult">
+      <div class="result-score" id="resultScore"></div>
+      <div class="result-label">out of 6 correct</div>
+      <div class="result-msg" id="resultMsg"></div>
+      <button class="quiz-restart" onclick="restartQuiz()">Try Again</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">AI Under the Lens</div>
+  <div class="footer-right">
+    A project on AI Bias, Ethics,<br>
+    Policy & Healthcare<br>
+    Built with HTML · CSS · JS
+  </div>
+</footer>
+
+<script>
+  // CURSOR
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+  document.querySelectorAll('button, a, .ethics-card, .case-card, .timeline-item').forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('big'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('big'));
+  });
+
+  // SCROLL REVEAL
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        e.target.style.transitionDelay = (i * 0.05) + 's';
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  revealEls.forEach(el => observer.observe(el));
+
+  // BIAS SIMULATOR
+  const biasData = {
+    hiring: {
+      note: "Amazon's internal AI recruiting tool (retired 2018) consistently downgraded résumés from women. Studies of resume-screening tools show persistent disparities tied to name-based race inference. Source: Reuters (2018), NBER (2021).",
+      bars: [
+        { label: 'White male applicants', value: 82, color: '#1c4de8' },
+        { label: 'White female applicants', value: 61, color: '#1cb87e' },
+        { label: 'Black male applicants', value: 54, color: '#f5c518' },
+        { label: 'Black female applicants', value: 38, color: '#e8341c' },
+        { label: 'Hispanic applicants', value: 44, color: '#e8341c' },
+      ]
+    },
+    face: {
+      note: "MIT Media Lab's Gender Shades audit (2018): Commercial facial analysis tools had error rates of <1% for lighter-skinned men vs. up to 34.7% for darker-skinned women. Source: Buolamwini & Gebru (2018).",
+      bars: [
+        { label: 'Lighter-skinned men', value: 99, color: '#1cb87e' },
+        { label: 'Lighter-skinned women', value: 93, color: '#1c4de8' },
+        { label: 'Darker-skinned men', value: 88, color: '#f5c518' },
+        { label: 'Darker-skinned women', value: 65, color: '#e8341c' },
+      ]
+    },
+    lending: {
+      note: "Mortgage algorithm audit (UC Berkeley, 2019): Algorithmic lenders charged Black and Hispanic borrowers 5.6–8.5 basis points more in interest, even after controlling for risk factors. Source: Bartlett et al. (2019).",
+      bars: [
+        { label: 'White applicants — approved', value: 78, color: '#1c4de8' },
+        { label: 'Asian applicants — approved', value: 74, color: '#1cb87e' },
+        { label: 'Hispanic applicants — approved', value: 58, color: '#f5c518' },
+        { label: 'Black applicants — approved', value: 51, color: '#e8341c' },
+      ]
+    },
+    medical: {
+      note: "Obermeyer et al. (Science, 2019): A widely used healthcare algorithm assigned equal risk scores to Black patients who were significantly sicker than white patients. Using health cost as a proxy for health need embedded structural inequality.",
+      bars: [
+        { label: 'White patients — resources', value: 76, color: '#1c4de8' },
+        { label: 'Asian patients — resources', value: 70, color: '#1cb87e' },
+        { label: 'Hispanic patients — resources', value: 55, color: '#f5c518' },
+        { label: 'Black patients — resources', value: 46, color: '#e8341c' },
+      ]
+    }
+  };
+
+  function showBias(type) {
+    document.querySelectorAll('.sim-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    const d = biasData[type];
+    document.getElementById('biasNote').textContent = d.note;
+    const chart = document.getElementById('biasChart');
+    chart.innerHTML = '';
+    d.bars.forEach(bar => {
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <div class="bar-label">${bar.label}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:0%;background:${bar.color}" data-target="${bar.value}">${bar.value}%</div>
+        </div>
+      `;
+      chart.appendChild(row);
+    });
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.bar-fill').forEach(fill => {
+        fill.style.width = fill.dataset.target + '%';
+      });
+    });
+  }
+  showBias('hiring');
+  document.getElementById('biasNote').textContent = biasData.hiring.note;
+
+  // QUIZ
+  const questions = [
+    {
+      q: "Amazon's AI recruiting tool (quietly retired in 2018) was found to systematically penalize résumés that included which word?",
+      opts: ["\"Engineer\"", "\"Women's\"", "\"Remote\"", "\"Leadership\""],
+      answer: 1,
+      feedback: "Correct. The system was trained on résumés submitted over 10 years — predominantly from men — and learned to penalize résumés containing the word \"women's\" (as in women's chess club) and downgraded graduates of all-women's colleges."
+    },
+    {
+      q: "The EU AI Act classifies AI systems into risk tiers. Which use case is explicitly PROHIBITED under the highest-risk classification?",
+      opts: ["AI chatbots in customer service", "Real-time remote biometric surveillance in public spaces", "AI-recommended content on social media", "Generative AI for creating music"],
+      answer: 1,
+      feedback: "Correct. The EU AI Act prohibits real-time remote biometric surveillance in public spaces by law enforcement, with narrow exceptions. It also prohibits social scoring and manipulation of vulnerable groups."
+    },
+    {
+      q: "A 2019 Science study by Obermeyer et al. found a major commercial healthcare algorithm was racially biased because it used what as a proxy for patient health needs?",
+      opts: ["Zip code / geography", "Health insurance type", "Healthcare cost history", "Age and gender combined"],
+      answer: 2,
+      feedback: "Correct. The algorithm used healthcare spending as a proxy for healthcare need. But Black patients spent less on healthcare due to systemic barriers to access — not because they were healthier. This caused the algorithm to systematically underestimate illness severity in Black patients."
+    },
+    {
+      q: "MIT researcher Joy Buolamwini's Gender Shades audit found that commercial facial recognition tools performed worst on which group?",
+      opts: ["Older white men", "Darker-skinned women", "Children under 10", "People wearing glasses"],
+      answer: 1,
+      feedback: "Correct. Buolamwini found error rates as high as 34.7% for darker-skinned women, compared to under 1% for lighter-skinned men — a staggering 34× disparity. This research directly led to Microsoft, IBM, and Amazon auditing and updating their facial recognition systems."
+    },
+    {
+      q: "Which AI ethics principle holds that individuals have the right to understand and receive an explanation for automated decisions that affect them?",
+      opts: ["Robustness", "Explainability / Transparency", "Beneficence", "Autonomy Preservation"],
+      answer: 1,
+      feedback: "Correct. Explainability (also called interpretability or transparency) is a foundational AI ethics principle. The EU's GDPR formalized a version of this as the 'right to explanation' for automated decisions — though its exact legal scope remains contested."
+    },
+    {
+      q: "DeepMind's AlphaFold made a major scientific breakthrough. What did it predict with near-experimental accuracy for virtually every known protein?",
+      opts: ["Gene expression levels", "Drug interaction side effects", "3D molecular structure", "Cellular mutation rates"],
+      answer: 2,
+      feedback: "Correct. AlphaFold predicted the 3D structure of over 200 million proteins — essentially the entire known protein universe — solving a 50-year-old grand challenge in biology. Protein structure determines function, and knowing structure dramatically accelerates drug discovery."
+    }
+  ];
+
+  let currentQ = 0;
+  let score = 0;
+  let answered = false;
+
+  function initQuiz() {
+    currentQ = 0; score = 0; answered = false;
+    document.getElementById('quizMain').style.display = 'block';
+    document.getElementById('quizResult').classList.remove('show');
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    answered = false;
+    const q = questions[currentQ];
+    // Progress
+    const prog = document.getElementById('quizProgress');
+    prog.innerHTML = questions.map((_, i) => {
+      let cls = i < currentQ ? 'done' : i === currentQ ? 'active' : '';
+      return `<div class="progress-pip ${cls}"></div>`;
+    }).join('');
+
+    document.getElementById('quizQNum').textContent = `Question ${currentQ + 1} of ${questions.length}`;
+    document.getElementById('quizQuestion').textContent = q.q;
+
+    const opts = document.getElementById('quizOptions');
+    opts.innerHTML = '';
+    q.opts.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-opt';
+      btn.textContent = opt;
+      btn.onclick = () => selectAnswer(i);
+      opts.appendChild(btn);
+    });
+
+    document.getElementById('quizFeedback').className = 'quiz-feedback';
+    document.getElementById('quizFeedback').textContent = '';
+    document.getElementById('quizNextBtn').classList.remove('show');
+    document.getElementById('quizScoreDisplay').textContent = `Score: ${score} / ${currentQ}`;
+  }
+
+  function selectAnswer(chosen) {
+    if (answered) return;
+    answered = true;
+    const q = questions[currentQ];
+    const opts = document.querySelectorAll('.quiz-opt');
+    const fb = document.getElementById('quizFeedback');
+
+    opts.forEach(o => o.disabled = true);
+
+    if (chosen === q.answer) {
+      score++;
+      opts[chosen].classList.add('correct');
+      fb.className = 'quiz-feedback correct show';
+      fb.textContent = '✓ ' + q.feedback;
+    } else {
+      opts[chosen].classList.add('wrong');
+      opts[q.answer].classList.add('correct');
+      fb.className = 'quiz-feedback wrong show';
+      fb.textContent = '✗ ' + q.feedback;
+    }
+
+    document.getElementById('quizScoreDisplay').textContent = `Score: ${score} / ${currentQ + 1}`;
+    document.getElementById('quizNextBtn').classList.add('show');
+    document.getElementById('quizNextBtn').textContent =
+      currentQ < questions.length - 1 ? 'Next →' : 'See Results →';
+  }
+
+  function nextQuestion() {
+    currentQ++;
+    if (currentQ >= questions.length) {
+      showResult();
+    } else {
+      renderQuestion();
+    }
+  }
+
+  function showResult() {
+    document.getElementById('quizMain').style.display = 'none';
+    const res = document.getElementById('quizResult');
+    res.classList.add('show');
+    document.getElementById('resultScore').textContent = score + '/' + questions.length;
+
+    const msgs = [
+      "Keep exploring — every question is a doorway into these important issues.",
+      "A solid start. The nuances of AI ethics reward deeper study.",
+      "Good understanding of the landscape. The details matter enormously.",
+      "Strong grasp of the key issues. You're engaging critically with AI's impact.",
+      "Excellent — you clearly follow these developments closely.",
+      "Outstanding. You understand both the promise and the peril of AI systems."
+    ];
+    document.getElementById('resultMsg').textContent = msgs[Math.min(score, msgs.length - 1)];
+  }
+
+  function restartQuiz() { initQuiz(); }
+
+  initQuiz();
+</script>
+</body>
+</html>
